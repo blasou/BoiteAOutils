@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculateur de Pourcentages</title>
+    <script src="calculs.js"></script>
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <div class="logo-container"><img src="logo.png" alt="Logo" id="headerLogo" onerror="this.style.display='none'"></div>
+            <h1>Pourcentages</h1>
+            <p class="subtitle">4 calculs de pourcentage — résultats instantanés</p>
+            <div class="nav-links">
+                <a href="./index.html" class="nav-link">🏠 Accueil</a>
+                <a href="./devis.html" class="nav-link">🏷️ Devis</a>
+                <a href="./facture.html" class="nav-link">📄 Facture</a>
+                <a href="./cartouche1.html" class="nav-link">📋 Cartouche 1</a>
+                <a href="./cartouche2.html" class="nav-link">📋 Cartouche 2</a>
+                <a href="./avant-projet.html" class="nav-link">📐 Avant Projet</a>
+                <a href="./convertisseur.html" class="nav-link">📏 Pente / °</a>
+                <a href="./pourcentages.html" class="nav-link active">🧮 Pourcentages</a>
+            </div>
+        </header>
+
+        <!-- 1. RATIO -->
+        <div class="card">
+            <h2 class="card-title">Ratio</h2>
+            <p class="hint">Combien de % la valeur A représente-t-elle par rapport à la valeur B ?</p>
+            <div class="row">
+                <div class="form-group"><label>Valeur A</label><input type="text" inputmode="decimal" id="ratioA" placeholder="ex : 50"></div>
+                <div class="form-group"><label>Valeur B</label><input type="text" inputmode="decimal" id="ratioB" placeholder="ex : 200"></div>
+            </div>
+            <div class="calc-result" id="ratioRes"><span class="res-label">A représente</span><span class="res-value">—</span></div>
+        </div>
+
+        <!-- 2. TAUX D'ÉVOLUTION -->
+        <div class="card">
+            <h2 class="card-title">Taux d'évolution</h2>
+            <p class="hint">Quel est le pourcentage d'augmentation ou de réduction entre A (départ) et B (arrivée) ?</p>
+            <div class="row">
+                <div class="form-group"><label>Valeur A (départ)</label><input type="text" inputmode="decimal" id="evoA" placeholder="ex : 200"></div>
+                <div class="form-group"><label>Valeur B (arrivée)</label><input type="text" inputmode="decimal" id="evoB" placeholder="ex : 250"></div>
+            </div>
+            <div class="calc-result" id="evoRes"><span class="res-label">Évolution</span><span class="res-value">—</span></div>
+        </div>
+
+        <!-- 3. APPLICATION D'UNE VARIATION -->
+        <div class="card">
+            <h2 class="card-title">Application d'une variation</h2>
+            <p class="hint">Quel est le résultat final si j'ajoute ou je retire X % à la valeur A ?</p>
+            <div class="toggle-group" id="varSens" data-sens="+">
+                <button type="button" class="toggle-btn active" data-val="+">Augmenter +</button>
+                <button type="button" class="toggle-btn is-minus" data-val="-">Réduire −</button>
+            </div>
+            <div class="row">
+                <div class="form-group"><label>Valeur A</label><input type="text" inputmode="decimal" id="varA" placeholder="ex : 200"></div>
+                <div class="form-group"><label>Variation X (%)</label><input type="text" inputmode="decimal" id="varX" placeholder="ex : 10"></div>
+            </div>
+            <div class="calc-result" id="varRes"><span class="res-label">Résultat final</span><span class="res-value">—</span></div>
+        </div>
+
+        <!-- 4. VALEUR INITIALE (INVERSÉ) -->
+        <div class="card">
+            <h2 class="card-title">Valeur initiale (inversé)</h2>
+            <p class="hint">J'ai une valeur finale B après une variation de X % : quelle était la valeur de départ A ?</p>
+            <div class="toggle-group" id="invSens" data-sens="+">
+                <button type="button" class="toggle-btn active" data-val="+">Après augmentation +</button>
+                <button type="button" class="toggle-btn is-minus" data-val="-">Après réduction −</button>
+            </div>
+            <div class="row">
+                <div class="form-group"><label>Valeur finale B</label><input type="text" inputmode="decimal" id="invB" placeholder="ex : 220"></div>
+                <div class="form-group"><label>Variation X (%)</label><input type="text" inputmode="decimal" id="invX" placeholder="ex : 10"></div>
+            </div>
+            <div class="calc-result" id="invRes"><span class="res-label">Valeur de départ</span><span class="res-value">—</span></div>
+        </div>
+    </div>
+
+    <script>
+        /* ---- Couche DOM uniquement : écoute les champs, appelle les fonctions
+               PURES de calculs.js, puis affiche. Aucun calcul ici. ---- */
+        (function () {
+            const parse = (v) => parseFloat(String(v).replace(',', '.').trim());
+            const nf = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 2 });
+            const fmt = (n) => (isFinite(n) ? nf.format(n) : '—');
+
+            const setRes = (boxId, text) => {
+                document.getElementById(boxId).querySelector('.res-value').textContent = text;
+            };
+
+            // Branche un input -> recalcul
+            const on = (ids, fn) => ids.forEach(id => document.getElementById(id).addEventListener('input', fn));
+
+            // Branche un toggle +/- -> recalcul
+            const wireToggle = (groupId, fn) => {
+                const group = document.getElementById(groupId);
+                group.querySelectorAll('.toggle-btn').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        group.querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('active'));
+                        btn.classList.add('active');
+                        group.dataset.sens = btn.dataset.val;
+                        fn();
+                    });
+                });
+            };
+
+            // 1. Ratio
+            function calcRatio() {
+                const a = parse(document.getElementById('ratioA').value);
+                const b = parse(document.getElementById('ratioB').value);
+                if (isNaN(a) || isNaN(b) || b === 0) return setRes('ratioRes', '—');
+                setRes('ratioRes', fmt(Calculs.ratio(a, b)) + ' % de B');
+            }
+            on(['ratioA', 'ratioB'], calcRatio);
+
+            // 2. Taux d'évolution
+            function calcEvo() {
+                const a = parse(document.getElementById('evoA').value);
+                const b = parse(document.getElementById('evoB').value);
+                const box = document.getElementById('evoRes');
+                box.classList.remove('is-up', 'is-down');
+                if (isNaN(a) || isNaN(b) || a === 0) return setRes('evoRes', '—');
+                const t = Calculs.tauxEvolution(a, b);
+                const signe = t > 0 ? '+ ' : (t < 0 ? '− ' : '');
+                setRes('evoRes', signe + fmt(Math.abs(t)) + ' %');
+                if (t > 0) box.classList.add('is-up');
+                else if (t < 0) box.classList.add('is-down');
+            }
+            on(['evoA', 'evoB'], calcEvo);
+
+            // 3. Application d'une variation
+            function calcVar() {
+                const a = parse(document.getElementById('varA').value);
+                const x = parse(document.getElementById('varX').value);
+                const sens = document.getElementById('varSens').dataset.sens;
+                if (isNaN(a) || isNaN(x)) return setRes('varRes', '—');
+                setRes('varRes', fmt(Calculs.appliquerVariation(a, x, sens)));
+            }
+            on(['varA', 'varX'], calcVar);
+            wireToggle('varSens', calcVar);
+
+            // 4. Valeur initiale (inversé)
+            function calcInv() {
+                const b = parse(document.getElementById('invB').value);
+                const x = parse(document.getElementById('invX').value);
+                const sens = document.getElementById('invSens').dataset.sens;
+                const diviseur = 1 + (sens === '-' ? -1 : 1) * (x / 100);
+                if (isNaN(b) || isNaN(x) || diviseur === 0) return setRes('invRes', '—');
+                setRes('invRes', fmt(Calculs.valeurInitiale(b, x, sens)));
+            }
+            on(['invB', 'invX'], calcInv);
+            wireToggle('invSens', calcInv);
+        })();
+    </script>
+</body>
+
+</html>

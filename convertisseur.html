@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Convertisseur Pente / Degré</title>
+    <script src="calculs.js"></script>
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <div class="logo-container"><img src="logo.png" alt="Logo" id="headerLogo" onerror="this.style.display='none'"></div>
+            <h1>Pente / Degré</h1>
+            <p class="subtitle">Conversion instantanée entre pente (%) et angle (°)</p>
+            <div class="nav-links">
+                <a href="./index.html" class="nav-link">🏠 Accueil</a>
+                <a href="./devis.html" class="nav-link">🏷️ Devis</a>
+                <a href="./facture.html" class="nav-link">📄 Facture</a>
+                <a href="./cartouche1.html" class="nav-link">📋 Cartouche 1</a>
+                <a href="./cartouche2.html" class="nav-link">📋 Cartouche 2</a>
+                <a href="./avant-projet.html" class="nav-link">📐 Avant Projet</a>
+                <a href="./convertisseur.html" class="nav-link active">📏 Pente / °</a>
+                <a href="./pourcentages.html" class="nav-link">🧮 Pourcentages</a>
+            </div>
+        </header>
+
+        <div class="card">
+            <h2 class="card-title">Convertisseur Pente / Degré</h2>
+            <p class="hint">Saisis une pente en % ou un angle en ° : l'autre champ se met à jour instantanément.</p>
+            <div class="row">
+                <div class="form-group">
+                    <label>Pente (%)</label>
+                    <input type="text" inputmode="decimal" id="pente" placeholder="ex : 100">
+                </div>
+                <div class="form-group">
+                    <label>Angle (°)</label>
+                    <input type="text" inputmode="decimal" id="degre" placeholder="ex : 45">
+                </div>
+            </div>
+
+            <div class="slope-viz">
+                <svg class="slope-svg" viewBox="0 0 340 180" role="img" aria-label="Visualisation de la pente">
+                    <polygon id="vizTri" points="30,150 300,150 300,150"></polygon>
+                    <line id="vizHyp" class="hyp" x1="30" y1="150" x2="300" y2="150"></line>
+                    <text id="vizLabel" x="40" y="142">0°</text>
+                </svg>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        /* ---- Couche DOM : lecture des champs, appel des fonctions pures de
+               calculs.js, puis affichage. Aucune logique de calcul ici. ---- */
+        (function () {
+            const pente = document.getElementById('pente');
+            const degre = document.getElementById('degre');
+            const tri = document.getElementById('vizTri');
+            const hyp = document.getElementById('vizHyp');
+            const label = document.getElementById('vizLabel');
+
+            const parse = (v) => parseFloat(String(v).replace(',', '.').trim());
+            const fmt = (n) => {
+                if (!isFinite(n)) return '';
+                return (Math.round(n * 1000) / 1000).toString().replace('.', ',');
+            };
+
+            function drawViz(angle) {
+                const x0 = 30, baseY = 150, run = 270, maxRise = 130;
+                const a = isFinite(angle) ? angle : 0;
+                let rise = run * Math.tan(a * Math.PI / 180);
+                rise = Math.max(0, Math.min(rise, maxRise));   // borné pour rester lisible
+                const apexX = x0 + run, apexY = baseY - rise;
+                tri.setAttribute('points', `${x0},${baseY} ${apexX},${baseY} ${apexX},${apexY}`);
+                hyp.setAttribute('x1', x0); hyp.setAttribute('y1', baseY);
+                hyp.setAttribute('x2', apexX); hyp.setAttribute('y2', apexY);
+                label.textContent = (isFinite(angle) ? fmt(angle) : '0') + '°';
+            }
+
+            pente.addEventListener('input', () => {
+                const p = parse(pente.value);
+                if (isNaN(p)) { degre.value = ''; drawViz(0); return; }
+                const angle = Calculs.penteVersDegre(p);
+                degre.value = fmt(angle);
+                drawViz(angle);
+            });
+
+            degre.addEventListener('input', () => {
+                const a = parse(degre.value);
+                if (isNaN(a)) { pente.value = ''; drawViz(0); return; }
+                pente.value = fmt(Calculs.degreVersPente(a));
+                drawViz(a);
+            });
+
+            drawViz(0);
+        })();
+    </script>
+</body>
+
+</html>

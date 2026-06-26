@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Générateur de Factures</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="logo.js"></script>
+    <script src="save_load.js"></script>
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <div class="container">
+        <div class="history-panel">
+            <h3>Dernières Sauvegardes</h3>
+            <ul id="historyList"></ul>
+        </div>
+        <header>
+            <div class="logo-container"><img src="logo.png" alt="Logo" id="headerLogo" onerror="this.style.display='none'"></div>
+            <h1>Générateur de Factures</h1>
+            <p class="subtitle">Créez vos factures professionnelles en quelques clics</p>
+            <div class="nav-links">
+                <a href="./index.html" class="nav-link">🏠 Accueil</a>
+                <a href="./devis.html" class="nav-link">🏷️ Devis</a>
+                <a href="./facture.html" class="nav-link active">📄 Facture</a>
+                <a href="./cartouche1.html" class="nav-link">📋 Cartouche 1</a>
+                <a href="./cartouche2.html" class="nav-link">📋 Cartouche 2</a>
+                <a href="./avant-projet.html" class="nav-link">📐 Avant Projet</a>
+                <a href="./convertisseur.html" class="nav-link">📏 Pente / °</a>
+                <a href="./pourcentages.html" class="nav-link">🧮 Pourcentages</a>
+            </div>
+        </header>
+        <div class="card">
+            <h2 class="card-title">Informations Émetteur</h2>
+            <div class="form-group"><label>Nom</label><input type="text" id="emetteurNom" value="HERAUT SABINE"></div>
+            <div class="form-group"><label>Adresse</label><textarea id="emetteurAdresse">300 Chemin du Pendut MAGALAS</textarea></div>
+            <div class="form-group"><label>SIREN</label><input type="text" id="emetteurSiren" value="890 549 348"></div>
+            <div class="form-group"><label>RC</label><input type="text" id="emetteurRC" value="15002352"></div>
+        </div>
+        <div class="card">
+            <h2 class="card-title">Informations Client</h2>
+            <div class="form-group"><label>Nom du client</label><input type="text" id="clientNom" value=""></div>
+            <div class="form-group"><label>Adresse</label><textarea id="clientAdresse"></textarea></div>
+        </div>
+        <div class="card">
+            <h2 class="card-title">Détails de la Facture</h2>
+            <div class="row">
+                <div class="form-group"><label>Numéro de facture</label><input type="text" id="numeroFacture" value="">
+                </div>
+                <div class="form-group"><label>Date</label><input type="date" id="dateFacture"></div>
+            </div>
+            <div class="form-group"><label>Lieu</label><input type="text" id="lieuFacture" value=""></div>
+        </div>
+        <div class="card">
+            <h2 class="card-title">Prestations</h2>
+            <div id="itemsContainer">
+                <div class="item-row">
+                    <div class="form-group"><label>Description</label><textarea></textarea></div>
+                    <div class="form-group"><label>Prix unitaire (€)</label><input type="number" step="0.01"
+                            value="0.00" class="prix-unitaire"></div>
+                    <div class="form-group"><label>Montant total (€)</label><input type="number" step="0.01"
+                            value="0.00" class="montant-total" readonly></div>
+                    <button class="btn-remove" onclick="removeItem(this)">✕</button>
+                </div>
+            </div>
+            <button class="btn-add" onclick="addItem()">+ Ajouter une prestation</button>
+        </div>
+        <div class="card">
+            <h2 class="card-title">Conditions</h2>
+            <div class="form-group"><label>Note TVA</label><input type="text" id="tvaNote"
+                    value="TVA non applicable, article 293B du code général des impôts"></div>
+            <div class="form-group"><label>Échéance</label><input type="text" id="echeance" value="immédiate"></div>
+            <div class="form-group"><label>Conditions de retard</label><textarea
+                    id="conditionsRetard">en cas de retard de paiement, application d'une indemnité forfaitaire pour frais de recouvrement de 40 euros selon l'article D441-5 du code du commerce</textarea>
+            </div>
+        </div>
+        <div class="card">
+            <h2 class="card-title">Sauvegarde</h2>
+            <div class="form-group">
+                <label>Nom du document (pour l'export)</label>
+                <input type="text" id="documentName" value="" placeholder="MaSuperFacture">
+            </div>
+        </div>
+        <div class="action-buttons">
+            <button class="btn-generate" onclick="generatePDF()">📄 Télécharger la Facture PDF</button>
+        </div>
+    </div>
+    <script>
+        document.getElementById('dateFacture').valueAsDate = new Date();
+        function addItem() {
+            const c = document.getElementById('itemsContainer'), d = document.createElement('div');
+            d.className = 'item-row';
+            d.innerHTML = `<div class="form-group"><label>Description</label><textarea></textarea></div><div class="form-group"><label>Prix unitaire (€)</label><input type="number" step="0.01" value="0.00" class="prix-unitaire"></div><div class="form-group"><label>Montant total (€)</label><input type="number" step="0.01" value="0.00" class="montant-total" readonly></div><button class="btn-remove" onclick="removeItem(this)">✕</button>`;
+            c.appendChild(d); attachItemListeners(d);
+        }
+        function removeItem(b) { const i = document.querySelectorAll('.item-row'); if (i.length > 1) b.closest('.item-row').remove(); else alert('Au moins une prestation.'); }
+        function attachItemListeners(item) { const p = item.querySelector('.prix-unitaire'), m = item.querySelector('.montant-total'); p.addEventListener('input', () => { m.value = p.value; }); }
+        document.querySelectorAll('.item-row').forEach(attachItemListeners);
+        // Réattache les écouteurs après un chargement (sauvegarde / historique)
+        window.onStateLoaded = () => document.querySelectorAll('.item-row').forEach(attachItemListeners);
+
+        async function generatePDF() {
+            const { jsPDF } = window.jspdf;
+            const logoImg = document.getElementById('headerLogo');
+            let logoData = null;
+            if (typeof logoBase64 !== 'undefined') {
+                logoData = logoBase64;
+            } else if (logoImg && logoImg.complete && logoImg.naturalHeight !== 0) {
+                try {
+                    const c = document.createElement('canvas');
+                    c.width = logoImg.naturalWidth; c.height = logoImg.naturalHeight;
+                    c.getContext('2d').drawImage(logoImg, 0, 0);
+                    logoData = c.toDataURL('image/png');
+                } catch (e) {
+                    console.warn("Impossible d'intégrer le logo en local (CORS):", e);
+                }
+            }
+            const doc = new jsPDF();
+            const pw = 210, ph = 297, m = 15, cw = pw - 2 * m;
+            const navy = [26, 58, 82], gold = [181, 149, 72], dark = [35, 35, 35], mid = [100, 100, 100], light = [248, 246, 241];
+
+            // BANDE GAUCHE
+            doc.setFillColor(...navy); doc.rect(0, 0, 4.5, ph, 'F');
+            doc.setFillColor(...gold); doc.rect(0, 0, 4.5, 55, 'F');
+
+            // EN-TÊTE
+            let y = 16;
+            if (logoData) {
+                const lh = 16, la = logoImg.naturalWidth / logoImg.naturalHeight;
+                doc.addImage(logoData, 'PNG', 10, y - 5, Math.min(lh * la, 42), lh);
+            }
+            const rx = pw - m;
+            doc.setFontSize(11); doc.setFont('times', 'bold'); doc.setTextColor(...navy);
+            doc.text(document.getElementById('emetteurNom').value, rx, y, { align: 'right' });
+            doc.setFontSize(7.5); doc.setFont('times', 'normal'); doc.setTextColor(...mid);
+            let ey = y + 4.5;
+            document.getElementById('emetteurAdresse').value.split('\n').forEach(l => { doc.text(l.trim(), rx, ey, { align: 'right' }); ey += 3.2; });
+            doc.text('SIREN : ' + document.getElementById('emetteurSiren').value, rx, ey, { align: 'right' }); ey += 3.2;
+            doc.text('RC ' + document.getElementById('emetteurRC').value, rx, ey, { align: 'right' });
+            y = 38;
+
+            // BANDEAU FACTURE
+            doc.setFillColor(...navy); doc.rect(m, y, cw, 13, 'F');
+            doc.setFontSize(16); doc.setFont('times', 'bold'); doc.setTextColor(255, 255, 255);
+            doc.text('FACTURE', m + 5, y + 9);
+            doc.setFontSize(12); doc.setTextColor(...gold);
+            doc.text(document.getElementById('numeroFacture').value, m + 45, y + 9);
+
+            const dateValue = document.getElementById('dateFacture').value;
+            const date = new Date(dateValue);
+            let ds = "";
+            if (dateValue && !isNaN(date)) {
+                ds = ', le ' + date.toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' });
+            }
+            doc.setFontSize(8); doc.setFont('times', 'italic'); doc.setTextColor(190, 190, 200);
+            doc.text(document.getElementById('lieuFacture').value + ds, pw - m - 3, y + 9, { align: 'right' });
+            y += 17;
+
+            // CLIENT
+            const cbw = 90, cbx = pw - m - cbw;
+            doc.setFillColor(...light); doc.setDrawColor(215, 212, 206); doc.setLineWidth(0.3);
+            doc.roundedRect(cbx, y, cbw, 32, 1.5, 1.5, 'FD');
+            doc.setFontSize(8); doc.setFont('times', 'normal'); doc.setTextColor(...gold);
+            doc.text('ADRESSÉ À', cbx + 5, y + 6);
+            doc.setFontSize(14); doc.setFont('times', 'bold'); doc.setTextColor(...navy);
+            doc.text(document.getElementById('clientNom').value, cbx + 5, y + 13);
+            doc.setFontSize(11); doc.setFont('times', 'normal'); doc.setTextColor(...dark);
+            let cy = y + 19;
+            document.getElementById('clientAdresse').value.split('\n').forEach(l => { doc.text(l.trim(), cbx + 5, cy); cy += 5; });
+            y += 40;
+
+            // TABLEAU - taille NATURELLE, pas étirée
+            doc.setFillColor(...gold); doc.rect(m, y, cw, 7.5, 'F');
+            doc.setFontSize(7.5); doc.setFont('times', 'bold'); doc.setTextColor(255, 255, 255);
+            doc.text('DESCRIPTION', m + 3, y + 5);
+            doc.text('PRIX UNIT.', m + cw - 52, y + 5);
+            doc.text('MONTANT', m + cw - 2, y + 5, { align: 'right' });
+            y += 7.5;
+
+            const items = document.getElementById('itemsContainer').querySelectorAll('.item-row');
+            let total = 0;
+            const rows = [];
+            items.forEach(item => {
+                const desc = item.querySelector('textarea').value;
+                const pu = parseFloat(item.querySelector('.prix-unitaire').value) || 0;
+                const mt = parseFloat(item.querySelector('.montant-total').value) || 0;
+                total += mt;
+                const lines = doc.splitTextToSize(desc, cw - 65);
+                rows.push({ lines, pu, mt, natH: Math.max(lines.length * 4.5, 8) });
+            });
+
+            rows.forEach((row, i) => {
+                const rh = row.natH;
+                doc.setFillColor(i % 2 === 0 ? 252 : 255, i % 2 === 0 ? 251 : 255, i % 2 === 0 ? 248 : 255);
+                doc.rect(m, y, cw, rh, 'F');
+                doc.setDrawColor(235, 232, 226); doc.setLineWidth(0.12);
+                doc.line(m, y + rh, m + cw, y + rh);
+                const ty = y + (rh - row.lines.length * 4.5) / 2 + 3.5;
+                doc.setFontSize(8.5); doc.setFont('times', 'normal'); doc.setTextColor(...dark);
+                row.lines.forEach((l, li) => doc.text(l, m + 3, ty + li * 4.5));
+                const my = y + rh / 2 + 1.2;
+                doc.setTextColor(...mid); doc.text(row.pu.toFixed(2) + ' €', m + cw - 52, my);
+                doc.setFont('times', 'bold'); doc.setTextColor(...dark);
+                doc.text(row.mt.toFixed(2) + ' €', m + cw - 2, my, { align: 'right' });
+                y += rh;
+            });
+
+            // Ligne de fermeture du tableau
+            doc.setDrawColor(...gold); doc.setLineWidth(0.4);
+            doc.line(m, y, m + cw, y);
+
+            // TOTAL - juste après le tableau
+            y += 10;
+            const tw = 80, tx = m + cw - tw;
+            doc.setFontSize(10); doc.setFont('times', 'normal'); doc.setTextColor(...mid);
+            doc.text('Sous-total HT', tx + 3, y + 4);
+            doc.setTextColor(...dark);
+            doc.text(total.toFixed(2) + ' €', m + cw - 3, y + 4, { align: 'right' });
+            y += 8;
+            doc.setFillColor(...navy);
+            doc.roundedRect(tx, y, tw, 12, 1.2, 1.2, 'F');
+            doc.setFontSize(12); doc.setFont('times', 'bold'); doc.setTextColor(255, 255, 255);
+            doc.text('TOTAL HT', tx + 4, y + 8);
+            doc.setFontSize(13);
+            doc.text(total.toFixed(2) + ' €', m + cw - 4, y + 8.2, { align: 'right' });
+
+            // CONDITIONS & TVA (moved below total to fill space, much bigger)
+            y += 30;
+            doc.setFontSize(11); doc.setFont('times', 'normal'); doc.setTextColor(...mid);
+            doc.text(document.getElementById('tvaNote').value, m + 7, y); y += 6;
+            doc.text('CGV jointes à la présente facture', m + 7, y); y += 8;
+
+            doc.setFontSize(12); doc.setFont('times', 'bold'); doc.setTextColor(...navy);
+            doc.text('Échéance :', m + 7, y);
+            doc.setFont('times', 'normal'); doc.setTextColor(...mid);
+            doc.text(document.getElementById('echeance').value, m + 7 + doc.getTextWidth('Échéance : '), y); y += 8;
+
+            doc.setFont('times', 'bold'); doc.setTextColor(...navy);
+            doc.text('Conditions :', m + 7, y);
+            const co = doc.getTextWidth('Conditions : ');
+            doc.setFont('times', 'normal'); doc.setTextColor(...mid);
+            doc.splitTextToSize(document.getElementById('conditionsRetard').value, cw - co - 15).forEach((l, i) => {
+                doc.text(l, m + 7 + (i === 0 ? co : 0), y + i * 5.5);
+            });
+
+            // FOOTER - A2S PROJECT
+            const footerY = ph - 15;
+            doc.setDrawColor(...gold); doc.setLineWidth(0.5);
+            doc.line(m, footerY, pw - m, footerY);
+            doc.setFontSize(11); doc.setFont('times', 'bold'); doc.setTextColor(...navy);
+            doc.text('A2S PROJECT - 2026', pw / 2, footerY + 6, { align: 'center' });
+
+            const customNameStr = document.getElementById('documentName')?.value?.trim();
+            const nomFichier = customNameStr ? customNameStr + '.pdf' : 'Facture_' + document.getElementById('numeroFacture').value + '.pdf';
+
+            if (typeof saveToHistory === 'function') saveToHistory('facture');
+
+            doc.save(nomFichier);
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            if (typeof renderHistory === 'function') renderHistory('facture');
+        });
+    </script>
+</body>
+
+</html>

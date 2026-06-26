@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Avant Projet</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+    <script src="save_load.js"></script>
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <div class="logo-container"><img src="logo.png" alt="Logo" id="headerLogo" onerror="this.style.display='none'"></div>
+            <h1>Avant Projet</h1>
+            <p class="subtitle">Tableau des surfaces</p>
+            <div class="nav-links">
+                <a href="./index.html" class="nav-link">🏠 Accueil</a>
+                <a href="./devis.html" class="nav-link">🏷️ Devis</a>
+                <a href="./facture.html" class="nav-link">📄 Facture</a>
+                <a href="./cartouche1.html" class="nav-link">📋 Cartouche 1</a>
+                <a href="./cartouche2.html" class="nav-link">📋 Cartouche 2</a>
+                <a href="./avant-projet.html" class="nav-link active">📐 Avant Projet</a>
+                <a href="./convertisseur.html" class="nav-link">📏 Pente / °</a>
+                <a href="./pourcentages.html" class="nav-link">🧮 Pourcentages</a>
+            </div>
+        </header>
+
+        <div class="card">
+            <h2 class="card-title">Informations du Projet</h2>
+            <div class="row">
+                <div class="form-group"><label>Commune</label><input type="text" id="apCommune" value=""></div>
+                <div class="form-group"><label>Adresse</label><input type="text" id="apAdresse" value=""></div>
+            </div>
+            <div class="form-group"><label>Maître d'ouvrage</label><input type="text" id="apMaitre" value=""></div>
+        </div>
+
+        <div class="card">
+            <h2 class="card-title">Surfaces par pièce</h2>
+            <div id="surfacesContainer">
+                <div class="surface-row"><input type="text" class="surface-label" value=""><input type="text"
+                        class="surface-input" value=""><button class="btn-remove" onclick="removeSurf(this)">✕</button>
+                </div>
+            </div>
+            <button class="btn-add" onclick="addSurf()">+ Ajouter une pièce</button>
+        </div>
+
+        <div class="card">
+            <h2 class="card-title">Totaux</h2>
+            <div class="row">
+                <div class="form-group"><label>Surface habitable</label><input type="text" id="apSurfHab" value=""
+                        readonly style="background: #e8e6e3; font-weight: bold;"></div>
+                <div class="form-group"><label>Garage</label><input type="text" id="apGarage" value=""></div>
+            </div>
+        </div>
+        <div class="card">
+            <h2 class="card-title">Sauvegarde</h2>
+            <div class="form-group">
+                <label>Nom du document (pour l'export)</label>
+                <input type="text" id="documentName" value="" placeholder="MonAvantProjet">
+            </div>
+        </div>
+        <input type="file" id="fileInput" accept=".json" style="display: none;" onchange="loadFromJson(event)">
+        <div class="action-buttons">
+            <button class="btn-action" onclick="document.getElementById('fileInput').click()">📂 Charger (JSON)</button>
+            <button class="btn-action" onclick="saveToJson()">💾 Sauvegarder (JSON)</button>
+            <button class="btn-generate" onclick="generatePDF()">📄 Télécharger l'Avant Projet (PDF)</button>
+        </div>
+    </div>
+
+    <script>
+        function addSurf() {
+            const c = document.getElementById('surfacesContainer'), d = document.createElement('div');
+            d.className = 'surface-row';
+            d.innerHTML = `<input type="text" class="surface-label" placeholder="Pièce"><input type="text" class="surface-input" placeholder="Surface"><button class="btn-remove" onclick="removeSurf(this)">✕</button>`;
+            c.appendChild(d);
+        }
+
+        function calcTotalHab() {
+            let total = 0;
+            document.querySelectorAll('#surfacesContainer .surface-input').forEach(input => {
+                let val = input.value.replace(/m2|m²|m/ig, '').replace(/,/g, '.').replace(/\s/g, '');
+                let num = parseFloat(val);
+                if (!isNaN(num)) total += num;
+            });
+            const formatted = total.toFixed(2).replace('.', ',') + 'm2';
+            const hb = document.getElementById('apSurfHab');
+            if (hb) hb.value = formatted;
+        }
+
+        document.getElementById('surfacesContainer').addEventListener('input', function (e) {
+            if (e.target.classList.contains('surface-input')) {
+                calcTotalHab();
+            }
+        });
+
+        function removeSurf(b) {
+            const s = document.querySelectorAll('.surface-row');
+            if (s.length > 1) {
+                b.closest('.surface-row').remove();
+                calcTotalHab();
+            } else {
+                alert('Au moins une pièce.');
+            }
+        }
+
+        function generatePDF() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a3' });
+            const pw = doc.internal.pageSize.getWidth();
+            const ph = doc.internal.pageSize.getHeight();
+
+            const commune = document.getElementById('apCommune').value;
+            const adresse = document.getElementById('apAdresse').value;
+            const maitre = document.getElementById('apMaitre').value;
+            const surfHab = document.getElementById('apSurfHab').value;
+            const garage = document.getElementById('apGarage').value;
+            const surfaces = [];
+            document.querySelectorAll('#surfacesContainer .surface-row').forEach(r => {
+                const p = r.querySelector('.surface-label').value;
+                const s = r.querySelector('.surface-input').value;
+                if (p && s) surfaces.push([p, s]);
+            });
+
+            const navy = [26, 58, 82], gold = [181, 149, 72], dark = [35, 35, 35], mid = [100, 100, 100];
+
+            // BORDURE
+            doc.setDrawColor(...navy); doc.setLineWidth(1.5);
+            doc.rect(4, 4, pw - 8, ph - 8);
+            doc.setDrawColor(...gold); doc.setLineWidth(0.5);
+            doc.rect(6, 6, pw - 12, ph - 12);
+
+            // HEADER
+            doc.setFillColor(...navy);
+            doc.rect(6, 6, pw - 12, 28, 'F');
+            doc.setFillColor(...gold);
+            doc.rect(6, 34, pw - 12, 2, 'F');
+
+            doc.setFontSize(22); doc.setFont('times', 'bold'); doc.setTextColor(255, 255, 255);
+            doc.text('AVANT PROJET SOMMAIRE', pw / 2, 20, { align: 'center' });
+            doc.setFontSize(12); doc.setFont('times', 'italic'); doc.setTextColor(190, 190, 200);
+            doc.text('Tableau des surfaces', pw / 2, 28, { align: 'center' });
+
+            // 2 COLONNES séparées par le centre pour permettre le pliage
+            const bodyTop = 40;
+            const bodyBottom = ph - 8;
+            const bodyH = bodyBottom - bodyTop;
+            const centerX = pw / 2;
+            const gap = 15; // Marge de chaque côté du pli au centre
+            const leftW = centerX - 8 - gap;
+            const rightX = centerX + gap;
+
+            // Pas de séparation verticale au centre pour un rendu propre au pliage
+
+            // ═══ COL GAUCHE : Tableau des surfaces ═══
+            const lx = 16;
+            let y = bodyTop + 10;
+            const tw = leftW - 24;
+
+            doc.setFontSize(14); doc.setFont('times', 'bold'); doc.setTextColor(...navy);
+            doc.text('TABLEAU DES SURFACES', lx, y);
+            y += 5;
+
+            doc.autoTable({
+                startY: y,
+                head: [['PIECE', 'SURFACE']],
+                body: surfaces,
+                theme: 'grid',
+                headStyles: { fillColor: navy, fontSize: 12, fontStyle: 'bold', halign: 'center', font: 'times', cellPadding: 4 },
+                bodyStyles: { fontSize: 11, font: 'times', cellPadding: 4 },
+                alternateRowStyles: { fillColor: [248, 246, 241] },
+                columnStyles: {
+                    0: { cellWidth: tw - 45, fontStyle: 'bold' },
+                    1: { cellWidth: 42, halign: 'center' }
+                },
+                margin: { left: lx },
+                tableWidth: tw
+            });
+            y = doc.lastAutoTable.finalY + 5;
+
+            // Totaux
+            doc.autoTable({
+                startY: y,
+                body: [['SURFACE HABITABLE', surfHab], ['GARAGE', garage]],
+                theme: 'grid',
+                bodyStyles: { fontSize: 12, fontStyle: 'bold', font: 'times', cellPadding: 4 },
+                columnStyles: {
+                    0: { cellWidth: tw - 45, fillColor: navy, textColor: [255, 255, 255] },
+                    1: { cellWidth: 42, halign: 'center', fillColor: navy, textColor: [255, 255, 255] }
+                },
+                margin: { left: lx },
+                tableWidth: tw
+            });
+
+            // ═══ COL DROITE : Infos projet ═══
+            const rx = rightX + 15;
+            const rw = pw - rightX - 22;
+            const sectionH = bodyH / 3;
+
+            // COMMUNE
+            let ry = bodyTop + 12;
+            doc.setFillColor(...navy);
+            doc.roundedRect(rx - 5, ry - 5, rw + 10, sectionH - 15, 3, 3, 'F');
+            doc.setFontSize(9); doc.setFont('times', 'normal'); doc.setTextColor(...gold);
+            doc.text('COMMUNE', rx + 2, ry + 3);
+            doc.setFontSize(28); doc.setFont('times', 'bold'); doc.setTextColor(255, 255, 255);
+            doc.text(doc.splitTextToSize(commune, rw), rx + 2, ry + 20);
+
+            // ADRESSE
+            ry = bodyTop + sectionH + 5;
+            doc.setFontSize(9); doc.setFont('times', 'bold'); doc.setTextColor(...gold);
+            doc.text('ADRESSE DU PROJET', rx, ry);
+            ry += 8;
+            doc.setFontSize(18); doc.setFont('times', 'normal'); doc.setTextColor(...dark);
+            const aLines = doc.splitTextToSize(adresse, rw);
+            doc.text(aLines, rx, ry);
+            ry += aLines.length * 9 + 10;
+            doc.setDrawColor(...gold); doc.setLineWidth(0.5);
+            doc.line(rx, ry, rx + rw, ry);
+
+            // MAITRE D'OUVRAGE
+            ry = bodyTop + sectionH * 2 + 5;
+            doc.setFontSize(9); doc.setFont('times', 'bold'); doc.setTextColor(...gold);
+            doc.text("MAITRE D'OUVRAGE", rx, ry);
+            ry += 8;
+            doc.setFontSize(18); doc.setFont('times', 'normal'); doc.setTextColor(...dark);
+            doc.text(doc.splitTextToSize(maitre, rw), rx, ry);
+
+            // Type en bas
+            doc.setFontSize(8); doc.setFont('times', 'italic'); doc.setTextColor(...mid);
+            doc.text('AVANT PROJET SOMMAIRE', rx, bodyBottom - 10);
+
+            const customNameStr = document.getElementById('documentName')?.value?.trim();
+            const nomFichier = customNameStr ? customNameStr + '.pdf' : 'Avant_Projet_Surfaces.pdf';
+            doc.save(nomFichier);
+        }
+    </script>
+</body>
+
+</html>

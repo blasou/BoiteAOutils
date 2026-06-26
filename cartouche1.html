@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cartouche 1 - DP</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+    <script src="save_load.js"></script>
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <div class="logo-container"><img src="logo.png" alt="Logo" id="headerLogo" onerror="this.style.display='none'"></div>
+            <h1>Cartouche 1</h1>
+            <p class="subtitle">Déclaration préalable de travaux</p>
+            <div class="nav-links">
+                <a href="./index.html" class="nav-link">🏠 Accueil</a>
+                <a href="./devis.html" class="nav-link">🏷️ Devis</a>
+                <a href="./facture.html" class="nav-link">📄 Facture</a>
+                <a href="./cartouche1.html" class="nav-link active">📋 Cartouche 1</a>
+                <a href="./cartouche2.html" class="nav-link">📋 Cartouche 2</a>
+                <a href="./avant-projet.html" class="nav-link">📐 Avant Projet</a>
+                <a href="./convertisseur.html" class="nav-link">📏 Pente / °</a>
+                <a href="./pourcentages.html" class="nav-link">🧮 Pourcentages</a>
+            </div>
+        </header>
+
+        <div class="card">
+            <h2 class="card-title">Informations du Projet</h2>
+            <div class="form-group"><label>Commune</label><input type="text" id="commune" value=""></div>
+            <div class="form-group"><label>Adresse du projet</label><input type="text" id="adresse" value=""></div>
+            <div class="form-group"><label>Maître d'ouvrage</label><input type="text" id="maitre" value=""></div>
+        </div>
+
+        <div class="card">
+            <h2 class="card-title">Pièces du Dossier</h2>
+            <div id="piecesContainer">
+                <div class="piece-row"><input type="text" class="piece-label" value=""><input type="text"
+                        class="piece-ref" value=""><button class="btn-remove-piece"
+                        onclick="removePiece(this)">✕</button></div>
+            </div>
+            <button class="btn-add" onclick="addPiece()">+ Ajouter une pièce</button>
+        </div>
+
+        <div class="card">
+            <h2 class="card-title">Échelles</h2>
+            <div id="echellesContainer">
+                <div class="piece-row"><input type="text" class="piece-label echelle-label" value="PLAN DE MASSE"><input type="text"
+                        class="piece-ref echelle-value" value=""><button class="btn-remove-piece"
+                        onclick="removeEch(this)">✕</button></div>
+                <div class="piece-row"><input type="text" class="piece-label echelle-label" value="COUPES"><input type="text"
+                        class="piece-ref echelle-value" value=""><button class="btn-remove-piece"
+                        onclick="removeEch(this)">✕</button></div>
+                <div class="piece-row"><input type="text" class="piece-label echelle-label" value="FACADES"><input type="text"
+                        class="piece-ref echelle-value" value=""><button class="btn-remove-piece"
+                        onclick="removeEch(this)">✕</button></div>
+            </div>
+            <button class="btn-add" onclick="addEch()">+ Ajouter une échelle</button>
+        </div>
+        <div class="card">
+            <h2 class="card-title">Sauvegarde</h2>
+            <div class="form-group">
+                <label>Nom du document (pour l'export)</label>
+                <input type="text" id="documentName" value="" placeholder="MonCartouche1">
+            </div>
+        </div>
+        <input type="file" id="fileInput" accept=".json" style="display: none;" onchange="loadFromJson(event)">
+        <div class="action-buttons">
+            <button class="btn-action" onclick="document.getElementById('fileInput').click()">📂 Charger (JSON)</button>
+            <button class="btn-action" onclick="saveToJson()">💾 Sauvegarder (JSON)</button>
+            <button class="btn-generate" onclick="generatePDF()">📄 Télécharger le Cartouche 1 (PDF)</button>
+        </div>
+    </div>
+
+    <script>
+        function removePiece(b) { const p = document.querySelectorAll('.piece-row'); if (p.length > 1) b.closest('.piece-row').remove(); else alert('Au moins une pièce.'); }
+
+        function addPiece() {
+            const c = document.getElementById('piecesContainer'), d = document.createElement('div');
+            d.className = 'piece-row';
+            d.innerHTML = `<input type="text" class="piece-label" placeholder="Nom de la pièce"><input type="text" class="piece-ref" placeholder="Réf."><button class="btn-remove-piece" onclick="removePiece(this)">✕</button>`;
+            c.appendChild(d);
+        }
+
+        function removeEch(b) { const e = document.querySelectorAll('#echellesContainer .piece-row'); if (e.length > 1) b.closest('.piece-row').remove(); else alert('Au moins une échelle.'); }
+
+        function addEch() {
+            const c = document.getElementById('echellesContainer'), d = document.createElement('div');
+            d.className = 'piece-row';
+            d.innerHTML = `<input type="text" class="piece-label echelle-label" placeholder="Nom"><input type="text" class="piece-ref echelle-value" placeholder="Échelle"><button class="btn-remove-piece" onclick="removeEch(this)">✕</button>`;
+            c.appendChild(d);
+        }
+
+        function generatePDF() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a3' });
+            const pw = doc.internal.pageSize.getWidth();
+            const ph = doc.internal.pageSize.getHeight();
+
+            const commune = document.getElementById('commune').value;
+            const adresse = document.getElementById('adresse').value;
+            const maitre = document.getElementById('maitre').value;
+
+            const echelles = [];
+            document.querySelectorAll('#echellesContainer .piece-row').forEach(r => {
+                const l = r.querySelector('.echelle-label').value;
+                const v = r.querySelector('.echelle-value').value;
+                if (l || v) echelles.push({ nom: l, ref: v });
+            });
+            const pieces = [];
+            document.querySelectorAll('#piecesContainer .piece-row').forEach(r => {
+                pieces.push({ nom: r.querySelector('.piece-label').value, ref: r.querySelector('.piece-ref').value });
+            });
+
+            const navy = [26, 58, 82], gold = [181, 149, 72], dark = [35, 35, 35], mid = [100, 100, 100];
+
+            // ═══════════════════════════════════════
+            // BORDURE COMPLÈTE - cadre autour de toute la page
+            // ═══════════════════════════════════════
+            doc.setDrawColor(...navy); doc.setLineWidth(1.5);
+            doc.rect(4, 4, pw - 8, ph - 8);
+            doc.setDrawColor(...gold); doc.setLineWidth(0.5);
+            doc.rect(6, 6, pw - 12, ph - 12);
+
+            // ═══════════════════════════════════════
+            // HEADER - bande navy en haut
+            // ═══════════════════════════════════════
+            doc.setFillColor(...navy);
+            doc.rect(6, 6, pw - 12, 24, 'F');
+            doc.setFillColor(...gold);
+            doc.rect(6, 30, pw - 12, 2, 'F');
+
+            doc.setFontSize(22); doc.setFont('times', 'bold'); doc.setTextColor(255, 255, 255);
+            doc.text('DECLARATION PREALABLE DE TRAVAUX', pw / 2, 22, { align: 'center' });
+
+            // ═══════════════════════════════════════
+            // LAYOUT 2 COLONNES avec espace central vide
+            // Gauche: Pièces + Échelles
+            // Droite: Infos projet
+            // ═══════════════════════════════════════
+            const bodyTop = 36;
+            const bodyBottom = ph - 8;
+            const bodyH = bodyBottom - bodyTop;
+            const centerX = pw / 2;
+            const gap = 15;
+            const leftW = centerX - 8 - gap;
+            const rightX = centerX + gap;
+            const rightW = pw - 8 - rightX;
+
+            // Pas de ligne de séparation verticale au centre
+
+            // ═══════════════════════════════════════
+            // COLONNE GAUCHE : Pièces + Échelles
+            // ═══════════════════════════════════════
+            const lx = 16;
+            let y = bodyTop + 12;
+
+            doc.setFontSize(14); doc.setFont('times', 'bold'); doc.setTextColor(...navy);
+            doc.text('PIECES CONSTITUANT LE DOSSIER', lx, y);
+            y += 5;
+
+            // Table pieces - grande, remplit l'espace
+            const pData = pieces.map(p => [p.nom, p.ref]);
+            const tableW = leftW - 24;
+            doc.autoTable({
+                startY: y,
+                head: [['PIECE', 'REFERENCE']],
+                body: pData,
+                theme: 'grid',
+                headStyles: { fillColor: navy, fontSize: 12, fontStyle: 'bold', halign: 'center', font: 'times', cellPadding: 4 },
+                bodyStyles: { fontSize: 11, font: 'times', cellPadding: 4 },
+                alternateRowStyles: { fillColor: [248, 246, 241] },
+                columnStyles: {
+                    0: { cellWidth: tableW - 45, fontStyle: 'bold' },
+                    1: { cellWidth: 42, halign: 'center' }
+                },
+                margin: { left: lx },
+                tableWidth: tableW
+            });
+            y = doc.lastAutoTable.finalY + 15;
+
+            // Échelles
+            doc.setFontSize(14); doc.setFont('times', 'bold'); doc.setTextColor(...navy);
+            doc.text('ECHELLES', lx, y);
+            y += 5;
+            const eData = echelles.map(e => [e.nom, e.ref]);
+            doc.autoTable({
+                startY: y,
+                body: eData,
+                theme: 'grid',
+                bodyStyles: { fontSize: 11, font: 'times', cellPadding: 4 },
+                alternateRowStyles: { fillColor: [248, 246, 241] },
+                columnStyles: {
+                    0: { cellWidth: tableW - 45, fontStyle: 'bold' },
+                    1: { cellWidth: 42, halign: 'center' }
+                },
+                margin: { left: lx },
+                tableWidth: tableW
+            });
+
+            // ═══════════════════════════════════════
+            // COLONNE DROITE : Infos projet
+            // Répartition verticale sur toute la hauteur
+            // ═══════════════════════════════════════
+            const rx = rightX + 15;
+            const rw = rightW - 30;
+            const sectionH = bodyH / 3;
+
+            // ─── SECTION 1 : COMMUNE ───
+            let ry = bodyTop + 15;
+            doc.setFillColor(...navy);
+            doc.roundedRect(rx - 5, ry - 5, rw + 10, sectionH - 15, 3, 3, 'F');
+
+            doc.setFontSize(9); doc.setFont('times', 'normal'); doc.setTextColor(...gold);
+            doc.text('COMMUNE', rx + 2, ry + 4);
+
+            doc.setFontSize(28); doc.setFont('times', 'bold'); doc.setTextColor(255, 255, 255);
+            const communeLines = doc.splitTextToSize(commune, rw);
+            doc.text(communeLines, rx + 2, ry + 20);
+
+            // ─── SECTION 2 : ADRESSE ───
+            ry = bodyTop + sectionH + 5;
+            doc.setFontSize(9); doc.setFont('times', 'bold'); doc.setTextColor(...gold);
+            doc.text('ADRESSE DU PROJET', rx, ry);
+            ry += 8;
+            doc.setFontSize(18); doc.setFont('times', 'normal'); doc.setTextColor(...dark);
+            const aLines = doc.splitTextToSize(adresse, rw);
+            doc.text(aLines, rx, ry);
+
+            // Ligne séparation
+            ry += aLines.length * 9 + 10;
+            doc.setDrawColor(...gold); doc.setLineWidth(0.5);
+            doc.line(rx, ry, rx + rw, ry);
+
+            // ─── SECTION 3 : MAITRE D'OUVRAGE ───
+            ry = bodyTop + sectionH * 2 + 5;
+            doc.setFontSize(9); doc.setFont('times', 'bold'); doc.setTextColor(...gold);
+            doc.text("MAITRE D'OUVRAGE", rx, ry);
+            ry += 8;
+            doc.setFontSize(18); doc.setFont('times', 'normal'); doc.setTextColor(...dark);
+            const mLines = doc.splitTextToSize(maitre, rw);
+            doc.text(mLines, rx, ry);
+
+            // ─── TYPE DE DOCUMENT en bas à droite ───
+            doc.setFontSize(8); doc.setFont('times', 'italic'); doc.setTextColor(...mid);
+            doc.text('DECLARATION PREALABLE DE TRAVAUX', rx, bodyBottom - 10);
+
+            const customNameStr = document.getElementById('documentName')?.value?.trim();
+            const nomFichier = customNameStr ? customNameStr + '.pdf' : 'Cartouche_1_DP.pdf';
+            doc.save(nomFichier);
+        }
+    </script>
+</body>
+
+</html>
